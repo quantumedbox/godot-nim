@@ -313,7 +313,7 @@ proc rangeError(nimType: string, value: string, className: cstring,
 
 proc nimDestroyFunc(obj: ptr GodotObject, methData: pointer,
                     userData: pointer) {.noconv.} =
-  let nimObj = cast[NimGodotObject](userData)
+  var nimObj = cast[NimGodotObject](userData)
   nimObj.removeGodotObject()
   GC_unref(nimObj)
 
@@ -327,7 +327,7 @@ proc refcountIncremented(obj: ptr GodotObject, methodData: pointer,
                          userData: pointer, numArgs: cint,
                          args: var array[MAX_ARG_COUNT, ptr GodotVariant]):
                       GodotVariant {.noconv.} =
-  let nimObj = cast[NimGodotObject](userData)
+  var nimObj = cast[NimGodotObject](userData)
   if not nimObj.isFinalized:
     GC_ref(nimObj)
 
@@ -335,7 +335,7 @@ proc refcountDecremented(obj: ptr GodotObject, methodData: pointer,
                          userData: pointer, numArgs: cint,
                          args: var array[MAX_ARG_COUNT, ptr GodotVariant]):
                       GodotVariant {.noconv.} =
-  let nimObj = cast[NimGodotObject](userData)
+  var nimObj = cast[NimGodotObject](userData)
   if not nimObj.isFinalized:
     GC_unref(nimObj)
   initGodotVariant(result, nimObj.isFinalized)

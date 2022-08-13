@@ -41,9 +41,10 @@ type
       ## reference points to Nim object.
       ## This is stored as a raw pointer to avoid reference cycles and therefore
       ## improve GC performance.
-    isRef*: bool
-    isFinalized: bool
-    isNative: bool
+    mask: uint8
+      ## Bit 0: isRef
+      ## Bit 1: isFinalized
+      ## Bit 2: isNative
 
   ConversionResult* {.pure.} = enum
     ## Conversion result to return from ``fromVariant`` procedure.
@@ -95,8 +96,31 @@ type
 
 include "internal/backwardcompat.inc.nim"
 
-proc isFinalized*(obj: NimGodotObject): bool {.inline.} =
-  obj.isFinalized
+{.push inline.}
+
+const isRefBit = 0b001u8
+const isFinalizedbit = 0b010u8
+const isNativeBit = 0b100u8
+
+func isRef*[T: NimGodotObject](obj: T): bool =
+  (obj.mask and isRefBit) != 0
+
+func isFinalized*[T: NimGodotObject](obj: T): bool =
+  (obj.mask and isFinalizedbit) != 0
+
+func isNative*[T: NimGodotObject](obj: T): bool =
+  (obj.mask and isNativeBit) != 0
+
+func `isRef=`*[T: NimGodotObject](obj: T, v: bool) =
+  obj.mask = if v: obj.mask or isRefBit else: obj.mask and not isRefBit
+
+func `isFinalized=`*[T: NimGodotObject](obj: T, v: bool) =
+  obj.mask = if v: obj.mask or isFinalizedbit else: obj.mask and not isFinalizedbit
+
+func `isNative=`*[T: NimGodotObject](obj: T, v: bool) =
+  obj.mask = if v: obj.mask or isNativeBit else: obj.mask and not isNativeBit
+
+{.pop.}
 
 var classRegistry {.threadvar.}: TableRef[FNV1Hash, ObjectInfo]
 var classRegistryStatic* {.compileTime.}: TableRef[FNV1Hash, ObjectInfo]
@@ -190,7 +214,7 @@ proc deinit*(obj: NimGodotObject) =
 proc linkedObject(obj: NimGodotObject): NimGodotObject {.inline.} =
   cast[NimGodotObject](obj.linkedObjectPtr)
 
-proc nimGodotObjectFinalizer*[T: NimGodotObject](obj: T) =
+proc nimGodotObjectFinalizer*[T: NimGodotObject](obj: T) {.nimcall.} =
   if obj.godotObject.isNil or obj.isNative: return
   # important to set it before so that ``unreference`` is aware
   obj.isFinalized = true
@@ -228,15 +252,15 @@ proc inherits(t: NimNode, parent: string): bool {.compileTime.} =
       break
     curT = getType(curT[1][1])
 
-macro isReference(T: typedesc): bool =
+macro isReference(T: typedesc[NimGodotObject]): bool =
   result = if inherits(getType(T), "Reference"): ident("true")
            else: ident("false")
 
-macro isResource(T: typedesc): bool =
+macro isResource(T: typedesc[NimGodotObject]): bool =
   result = if inherits(getType(T), "Resource"): ident("true")
            else: ident("false")
 
-template registerClass*(T: typedesc; godotClassName: string or cstring,
+template registerClass*(T: typedesc[NimGodotObject], godotClassName: string or cstring,
                         native: bool) =
   ## Registers the specified Godot type.
   ## Used by ``gdobj`` macro and `godotapigen <godotapigen.html>`_.
