@@ -149,7 +149,7 @@ proc identDefsToVarDecls(identDefs: NimNode): seq[VarDecl] =
     ))
 
 proc parseMethod(meth: NimNode): MethodDecl =
-  assert(meth.kind in {nnkProcDef, nnkMethodDef})
+  assert(meth.kind in {nnkProcDef, nnkMethodDef, nnkFuncDef})
   let isGdExport = removePragma(meth, "gdExport")
   let isNoGodot = (meth.kind != nnkMethodDef and not isGdExport) or
                   removePragma(meth, "noGdExport")
@@ -199,7 +199,7 @@ proc parseType(ast: NimNode): ObjectDecl =
       of nnkVarSection:
         let varSection = parseVarSection(statement)
         result.fields.add(varSection)
-      of nnkProcDef, nnkMethodDef:
+      of nnkProcDef, nnkMethodDef, nnkFuncDef:
         let meth = parseMethod(statement)
         result.methods.add(meth)
       of nnkCommentStmt:
