@@ -61,11 +61,11 @@ proc extractNames(definition: NimNode):
         error("parent type expected", definition[2])
 
 when not declared(newRStrLit):
-  proc newRStrLit(s: string): NimNode {.compileTime.} =
+  proc newRStrLit(s: string): NimNode =
     result = newNimNode(nnkRStrLit)
     result.strVal = s
 
-proc newCStringLit(s: string): NimNode {.compileTime.} =
+proc newCStringLit(s: string): NimNode =
   newNimNode(nnkCallStrLit).add(ident("cstring"), newRStrLit(s))
 
 iterator pragmas(node: NimNode):
@@ -78,7 +78,7 @@ iterator pragmas(node: NimNode):
       yield (node[index].strVal, nil, index)
 
 proc removePragmaNode(statement: NimNode,
-                      pname: string): NimNode {.compileTime.} =
+                      pname: string): NimNode =
   ## Removes the pragma from the node and returns value of the pragma
   ## Works for routine nodes or nnkPragmaExpr
   if not (RoutineNodes.contains(statement.kind) or
@@ -106,14 +106,14 @@ proc removePragma(statement: NimNode, pname: string): bool =
       return true
 
 proc removeStrPragma(statement: NimNode,
-                     pname: string): Option[string] {.compileTime.} =
+                     pname: string): Option[string] =
   ## Removes the pragma from the node and returns value of the pragma
   ## Works for routine nodes or nnkPragmaExpr
   let node = removePragmaNode(statement, pname)
   result = if node.isNil: none(string)
            else: some($node)
 
-proc isExported(node: NimNode): bool {.compileTime.} =
+proc isExported(node: NimNode): bool =
   if node.kind == nnkPragmaExpr:
     result = isExported(node[0])
   elif node.kind == nnkPostfix:
@@ -157,7 +157,7 @@ proc parseMethod(meth: NimNode): MethodDecl =
     name: $meth[0].basename,
     args: newSeq[VarDecl](),
     returnType: meth[3][0],
-    isVirtual: meth.kind == nnkMethodDef,
+    isVirtual: meth.kind == nnkMethodDef and not isGdExport,
     isNoGodot: isNoGodot,
     nimNode: meth
   )
@@ -441,7 +441,7 @@ proc toGodotStyle(s: string): string {.compileTime.} =
     else:
       result.add(c)
 
-proc genType(obj: ObjectDecl): NimNode {.compileTime.} =
+proc genType(obj: ObjectDecl): NimNode =
   result = newNimNode(nnkStmtList)
 
   # Nim type definition
