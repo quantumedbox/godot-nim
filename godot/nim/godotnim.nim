@@ -310,7 +310,8 @@ proc newNimGodotObject[T: NimGodotObject](
   if objInfo.constructor.isNil:
     printError("Nim constructor not found for class " & $godotClassName)
   else:
-    result = T(objInfo.constructor())
+    let obj = objInfo.constructor()
+    result = when obj is T: obj else: obj.T
     result.godotObject = godotObject
     result.isRef = objInfo.isRef
     if not noRef and objInfo.isRef:
