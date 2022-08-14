@@ -153,13 +153,15 @@ proc parseMethod(meth: NimNode): MethodDecl =
   let isGdExport = removePragma(meth, "gdExport")
   let isNoGodot = (meth.kind != nnkMethodDef and not isGdExport) or
                   removePragma(meth, "noGdExport")
+  let node = newNimNode(nnkProcDef)
+  copyChildrenTo(meth, node)
   result = MethodDecl(
     name: $meth[0].basename,
     args: newSeq[VarDecl](),
     returnType: meth[3][0],
     isVirtual: meth.kind == nnkMethodDef and not isGdExport,
     isNoGodot: isNoGodot,
-    nimNode: meth
+    nimNode: node
   )
   for i in 1..<meth[3].len:
     var identDefs = meth[3][i]
